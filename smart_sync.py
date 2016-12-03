@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import logging
 import subprocess
 import threading
 import time
@@ -10,8 +11,16 @@ from watchdog.events import PatternMatchingEventHandler
 
 
 def do_rsync(cmd_line):
-    print(cmd_line)
-    subprocess.call(cmd_line)
+    logging.debug("executing external command: {}".format(" ".join(cmd_line)))
+    try:
+        logging.info("syncing file system changes")
+        out = subprocess.check_output(cmd_line, stderr=subprocess.STDOUT)
+        logging.info("sync complete")
+        logging.debug("external command output: {}".format(out))
+    except subprocess.CalledProcessError as e:
+        logging.error(e)
+        logging.error("failing command says: {}".format(e.output))
+        logging.warning("file system changes not synced")
 
 
 class SyncFSThread(threading.Thread):
@@ -37,18 +46,20 @@ class SyncFSThread(threading.Thread):
                 do_rsync(self._cmd_line)
                 self._fs_changed_event.clear()
             time.sleep(2)
-        # Before exiting check for any left over events and rsync them
+        # Before exiting check for any left over events and sync them
         if self._fs_changed_event.is_set():
+            logging.info("syncing any remaining file system changes")
             do_rsync(self._cmd_line)
 
 
-class MyHandler(PatternMatchingEventHandler):
+class AllEventHandler(PatternMatchingEventHandler):
     def __init__(self, thread_to_notify):
         super().__init__()
         self._thread = thread_to_notify
 
     def on_any_event(self, event):
-        print("observer: ", event)
+        logging.info(event)
+        # print("observer: ", event)
         self._thread.fs_has_changed()
 
 
@@ -71,8 +82,8 @@ def parse_args():
 
 
 def main():
+    logging.basicConfig(format="%(asctime)s:%(levelname)s: %(message)s", level=logging.INFO)
     args = parse_args()
-    print(args)
     cmd_line = ["rsync", "-e", "ssh", "-ruvz"]
     if args.delete:
         cmd_line.append("--delete")
@@ -81,27 +92,29 @@ def main():
     for name in args.exclude:
         cmd_line.extend(["--exclude", name])
     cmd_line.extend([args.src, args.dest])
-    print(cmd_line)
 
-    sync_fs_thread = SyncFSThread(cmd_line)
+
     observer_thread = Observer()
-    event_handler = MyHandler(sync_fs_thread)
+    sync_fs_thread = SyncFSThread(cmd_line)
+    event_handler = AllEventHandler(sync_fs_thread)
     observer_thread.schedule(event_handler, args.src, recursive=True)
 
+    logging.info("starting file system observer thread")
     observer_thread.start()
+    logging.info("starting file system syncing thread")
     sync_fs_thread.start()
 
     try:
         while True:
-            _ = input("Press ctrl + c to stop")
+            input()
     except (KeyboardInterrupt, EOFError):
-        print("\nTerminating worker threads please wait...")
+        logging.info("terminating worker threads please wait")
         observer_thread.stop()
         sync_fs_thread.stop()
 
     observer_thread.join()
     sync_fs_thread.join()
-    print("Exiting...")
+    logging.info("exiting")
 
 
 if __name__ == "__main__":
