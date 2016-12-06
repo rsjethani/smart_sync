@@ -1,1 +1,1 @@
-# smart-sync
+# smart_sync

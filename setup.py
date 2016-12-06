@@ -11,14 +11,14 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='smart_sync',
 
-    version='0.1.0dev1',
+    version='0.1.1',
 
     description='Automatic and Smart File System Syncing',
 
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/rsjethani/smart-sync',
+    url='https://github.com/rsjethani/smart_sync',
 
     # Author details
     author='Ravi Shekhar Jethani',
@@ -55,6 +55,6 @@ setup(
     install_requires = ['watchdog >= 0.8.3'],
 
     entry_points = {
-        'console_scripts': ['smart_sync=smart_sync.smart_sync:main']
+        'console_scripts': ['smart_sync=smart_sync:main']
     }
 )
