@@ -11,7 +11,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='smart_sync',
 
-    version='0.1.1',
+    version='0.1.0dev1',
 
     description='Automatic and Smart File System Syncing',
 
@@ -43,14 +43,14 @@ setup(
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
 
-    packages = find_packages(),
+    # packages = find_packages(),
+    py_modules = ['smart_sync'],
 
     install_requires = ['watchdog >= 0.8.3'],
 
