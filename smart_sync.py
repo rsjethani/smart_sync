@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import argparse
 import logging
@@ -8,6 +8,52 @@ import time
 
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
+
+
+def parse_args():
+
+    def positive_integer(val):
+        val = int(val)
+        if val < 0:
+            msg = "'{}' is not a positive integer".format(val)
+            raise argparse.ArgumentTypeError(msg)
+        return val
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("src", help="Source file or directory to watch")
+    parser.add_argument("dest", help="Destination file or directory to "
+                                     "synchronize")
+    parser.add_argument("-d", "--delete", action="store_true",
+                        help="Delete extraneous files which only exist "
+                             "at dest")
+    parser.add_argument("-e", "--exclude", nargs="+",
+                        help="List of file/directory names to exclude."
+                             " You can also give wildcard patterns.")
+    parser.add_argument("-f", "--exclude-from",
+                        help="File from which to read exclude names and "
+                             "patterns.")
+    parser.add_argument("-l", "--log-level", choices={"INFO", "DEBUG"},
+                        default="INFO",
+                        help="Set logging level. Default: INFO")
+    parser.add_argument("-w", "--wait", type=positive_integer, default=3,
+                        help="No. of seconds to wait after last event "
+                             "before starting syncing process.")
+
+    return parser.parse_args()
+
+
+def build_rsync_command_line(args):
+    """Build rsync command from command line arguments"""
+    cmd_line = ["rsync", "-e", "ssh", "-ruvz"]
+    if args.delete:
+        cmd_line.append("--delete")
+    if args.exclude_from:
+        cmd_line.extend(["--exclude-from", args.exclude_from])
+    if args.exclude:
+        for name in args.exclude:
+            cmd_line.extend(["--exclude", name])
+    cmd_line.extend([args.src, args.dest])
+    return cmd_line
 
 
 def do_rsync(cmd_line):
@@ -23,8 +69,6 @@ def do_rsync(cmd_line):
         logging.warning("file system changes not synced")
 
 
-
-
 class AllEventHandler(PatternMatchingEventHandler):
     def __init__(self, event):
         super().__init__()
@@ -37,37 +81,13 @@ class AllEventHandler(PatternMatchingEventHandler):
         logging.info(event)
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("src", help="source file or directory to watch")
-    parser.add_argument("dest", help="destination file or directory to "
-                                     "synchronize")
-    parser.add_argument("-d", "--delete", action="store_true",
-                        help="delete extraneous files which only exist "
-                             "at dest")
-    parser.add_argument("-e", "--exclude", nargs="+",
-                        help="list of file/directory names to exclude."
-                             " You can also give wildcard patterns.")
-    parser.add_argument("-f", "--exclude-from",
-                        help="file from which to read exclude names and "
-                             "patterns.")
-
-    return parser.parse_args()
-
-
 def main():
-    logging.basicConfig(format="%(asctime)s:%(levelname)s: %(message)s",
-                        level=logging.DEBUG)
     args = parse_args()
-    cmd_line = ["rsync", "-e", "ssh", "-ruvz"]
-    if args.delete:
-        cmd_line.append("--delete")
-    if args.exclude_from:
-        cmd_line.extend(["--exclude-from", args.exclude_from])
-    if args.exclude:
-        for name in args.exclude:
-            cmd_line.extend(["--exclude", name])
-    cmd_line.extend([args.src, args.dest])
+
+    time_to_wait = args.wait
+    cmd_line = build_rsync_command_line(args)
+    logging.basicConfig(format="%(asctime)s:%(levelname)s: %(message)s",
+                        level=args.log_level)
 
     fs_change_event = threading.Event()
     handler = AllEventHandler(fs_change_event)
@@ -76,7 +96,6 @@ def main():
     logging.info("starting file system observer thread")
     observer_thread.start()
 
-    time_to_wait = 3
     try:
         while True:
             if fs_change_event.is_set():

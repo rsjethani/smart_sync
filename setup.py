@@ -11,7 +11,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='smart_sync',
 
-    version='0.1.0dev1',
+    version='0.1.0dev2',
 
     description='Automatic and Smart File System Syncing',
 
