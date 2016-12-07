@@ -23,44 +23,18 @@ def do_rsync(cmd_line):
         logging.warning("file system changes not synced")
 
 
-class SyncFSThread(threading.Thread):
-    def __init__(self, cmd_line, wait=3):
-        super().__init__(daemon=True)
-        self._cmd_line = cmd_line
-        self.time_to_wait = wait
-        self.last_change_time = 0
-        self._fs_changed_event = threading.Event()
-        self._stop_thread_event = threading.Event()
-
-    def stop(self):
-        self._stop_thread_event.set()
-
-    def fs_has_changed(self):
-        self._fs_changed_event.set()
-        self.last_change_time = time.time()
-
-    def run(self):
-        while not self._stop_thread_event.is_set():
-            time_elapsed = time.time() - self.last_change_time
-            if self._fs_changed_event.is_set() and time_elapsed > self.time_to_wait:
-                do_rsync(self._cmd_line)
-                self._fs_changed_event.clear()
-            time.sleep(2)
-        # Before exiting check for any left over events and sync them
-        if self._fs_changed_event.is_set():
-            logging.info("syncing any remaining file system changes")
-            do_rsync(self._cmd_line)
 
 
 class AllEventHandler(PatternMatchingEventHandler):
-    def __init__(self, thread_to_notify):
+    def __init__(self, event):
         super().__init__()
-        self._thread = thread_to_notify
+        self.fs_event = event
+        self.last_event_time = 0
 
     def on_any_event(self, event):
+        self.last_event_time = time.time()
+        self.fs_event.set()
         logging.info(event)
-        # print("observer: ", event)
-        self._thread.fs_has_changed()
 
 
 def parse_args():
@@ -82,38 +56,44 @@ def parse_args():
 
 
 def main():
-    logging.basicConfig(format="%(asctime)s:%(levelname)s: %(message)s", level=logging.INFO)
+    logging.basicConfig(format="%(asctime)s:%(levelname)s: %(message)s",
+                        level=logging.DEBUG)
     args = parse_args()
     cmd_line = ["rsync", "-e", "ssh", "-ruvz"]
     if args.delete:
         cmd_line.append("--delete")
     if args.exclude_from:
         cmd_line.extend(["--exclude-from", args.exclude_from])
-    for name in args.exclude:
-        cmd_line.extend(["--exclude", name])
+    if args.exclude:
+        for name in args.exclude:
+            cmd_line.extend(["--exclude", name])
     cmd_line.extend([args.src, args.dest])
 
-
+    fs_change_event = threading.Event()
+    handler = AllEventHandler(fs_change_event)
     observer_thread = Observer()
-    sync_fs_thread = SyncFSThread(cmd_line)
-    event_handler = AllEventHandler(sync_fs_thread)
-    observer_thread.schedule(event_handler, args.src, recursive=True)
-
+    observer_thread.schedule(handler, args.src, recursive=True)
     logging.info("starting file system observer thread")
     observer_thread.start()
-    logging.info("starting file system syncing thread")
-    sync_fs_thread.start()
 
+    time_to_wait = 3
     try:
         while True:
-            input()
+            if fs_change_event.is_set():
+                time_since_last_event = time.time() - handler.last_event_time
+                if time_since_last_event > time_to_wait:
+                    do_rsync(cmd_line)
+                    fs_change_event.clear()
+            time.sleep(2)
     except (KeyboardInterrupt, EOFError):
         logging.info("terminating worker threads please wait")
         observer_thread.stop()
-        sync_fs_thread.stop()
+        # Before exiting check for any left over events and sync them
+        if fs_change_event.is_set():
+            logging.info("syncing remaining file system changes")
+            do_rsync(cmd_line)
 
     observer_thread.join()
-    sync_fs_thread.join()
     logging.info("exiting")
 
 
