@@ -89,6 +89,9 @@ def main():
     logging.basicConfig(format="%(asctime)s:%(levelname)s: %(message)s",
                         level=args.log_level)
 
+    logging.info("performing initial sync, please wait")
+    do_rsync(cmd_line)
+
     fs_change_event = threading.Event()
     handler = AllEventHandler(fs_change_event)
     observer_thread = Observer()
@@ -96,6 +99,7 @@ def main():
     logging.info("starting file system observer thread")
     observer_thread.start()
 
+    logging.info("now watching path: {} for changes".format(args.src))
     try:
         while True:
             if fs_change_event.is_set():
