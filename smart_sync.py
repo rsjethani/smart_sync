@@ -109,7 +109,7 @@ def main():
                     fs_change_event.clear()
             time.sleep(2)
     except (KeyboardInterrupt, EOFError):
-        logging.info("terminating worker threads please wait")
+        logging.info("terminating observer threads please wait")
         observer_thread.stop()
         # Before exiting check for any left over events and sync them
         if fs_change_event.is_set():
