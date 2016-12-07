@@ -6,15 +6,23 @@ Introduction
 
 **The Use Case**
 
-Many a times we need to run code developed on Windows but we also need to run/test the code on a Linux system. This may be required because:
+Many a times we need to run code developed on Windows but we also need to
+run/test the code on a Linux system. This may be required because:
 
-- The code has to be cross platform for e.g. a Java/Python package which should support both Windows and Linux systems.
+- The code has to be cross platform for e.g. a Java/Python package which
+  should support both Windows and Linux systems.
 
-- The code is only meant to run on Linux systems but the team is more comfortable developing on a Windows system.
+- The code is only meant to run on Linux systems but the team is more
+  comfortable developing on a Windows system.
 
-- Even if the development and test systems have same platform we may have to use a separate test system due to software/hardware constraints on the developemnt system.
+- Even if the development and test systems have same platform we may have
+  to use a separate test system due to software/hardware constraints on the
+  developemnt system.
 
-In these cases we constantly need to **manually** copy even the smallest change to a Linux system where the change will be tested. Things becomes complicated when many small changes spanning many files need to be copied. This is where smart_sync comes to the rescue.
+In these cases we constantly need to **manually** copy even the smallest
+change to a Linux system where the change will be tested. Things becomes
+complicated when many small changes spanning many files need to be copied.
+This is where smart_sync comes to the rescue.
 
 **What smart_sync does**
 
@@ -35,9 +43,9 @@ Steps::
 
     $ pip3 install git+https://github.com/rsjethani/smart_sync
 
+
 Usage Scenario
 --------------
-
 Let's assume you are working on a project called **myproject** on your local
 machine and you test new changes in a VM say **test-vm**.
 
@@ -58,10 +66,11 @@ process.For example::
     
 **Excluding by reading from a file**
 
-You can also give a file as an argument ``-f/--exclude-from`` to smart_sync which contains
-files/diretories/patterns to ignore. For example::
+You can also give a file as an argument ``-f/--exclude-from`` to smart_sync which
+contains files/directories/patterns to ignore. For example::
 
     $ smart_sync  path/to/project  remote_user@test-vm:path/to/target -f path/to/project/.gitignore
+
 Now smart_sync will not track changes on files etc. specified in .gitingnore file.
 
 **Do not allow extra files on destination**
