@@ -45,10 +45,26 @@ Step 1: start smart_sync on local-dev like::
 
     $ smart_sync path/to/project remote_user@test-vm:path/to/target
 
-Step 2: Just keep making changes on local-dev and forget about manually copying any modification/changes on test-vm.
+Step 2: Just keep making changes on local-dev and forget about manually
+copying any modification/changes on test-vm.
 
-**Excluding files/directories from copying to target**
+**Excluding files/directories/patterns from copying to target**
 
-For this you can use ``-e/--exclude`` option. THis options takes a space
- separated list of files or directories which you want to exclude from syncing
- process.
+For this you can use ``-e/--exclude`` option. This options takes a space
+separated list of files or directories which you want to exclude from syncing
+process.For example::
+
+    $ smart_sync  path/to/project  remote_user@test-vm:path/to/target -e file 1 '*.pyc' dir1 ...
+    
+**Excluding by reading from a file**
+
+You can also give a file as an argument ``-f/--exclude-from`` to smart_sync which contains
+files/diretories/patterns to ignore. For example::
+
+    $ smart_sync  path/to/project  remote_user@test-vm:path/to/target -f path/to/project/.gitignore
+Now smart_sync will not track changes on files etc. specified in .gitingnore file.
+
+**Do not allow extra files on destination**
+
+By default the destination may contain extra files other than what comes
+from source. If you do not want this then use ``-d/--delete`` option.
