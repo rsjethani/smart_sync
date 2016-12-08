@@ -52,7 +52,7 @@ setup(
     # packages = find_packages(),
     py_modules = ['smart_sync'],
 
-    install_requires = ['watchdog >= 0.8.3'],
+    install_requires = ['watchdog >= 0.8.3', 'paramiko', 'python-librsync'],
 
     entry_points = {
         'console_scripts': ['smart_sync=smart_sync:main']
